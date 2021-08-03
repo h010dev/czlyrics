@@ -6,9 +6,6 @@
 #include "czlyrics-spider.h"
 
 static const char *s_lyrics_endpoint = "/api/lyrics/*/*";
-static int         err;
-
-char *extract_lyrics (const char *f_path);
 
 void
 fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
@@ -20,11 +17,17 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
 
         if (mg_http_match_uri (hm, s_lyrics_endpoint))
         {
-            if ((err = scrape_lyrics (s_lyrics_endpoint)) == 0)
+            int err;
+            struct Endpoint *endpoint = NULL;
+            endpoint = extract_uri (hm->uri.ptr);
+            if ((err = scrape_lyrics (endpoint->artist, endpoint->song)) == 0)
             {
-                char *s_lyrics = extract_lyrics ("./cache/eminem_without-me.html");
-                mjson_printf (mjson_print_dynamic_buf, &json, "{%Q:{%Q:%Q}}", "data", "lyrics", s_lyrics);
+                char *s_uri = malloc (2048);
+                char *s_lyrics = extract_lyrics (endpoint);
+                mjson_printf (mjson_print_dynamic_buf, &json, 
+                        "{%Q:{%Q:%Q}}", "data", "lyrics", s_lyrics);
                 mg_http_reply (c, 200, "Content-Type: application/json\r\n", "%s", json);
+                free (s_uri);
                 free (s_lyrics);
             }
             else 
@@ -33,6 +36,7 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
                         "{%Q:{%Q:%d,%Q:%Q}}", "error", "code", 404, "message", "Lyrics not found");
                 mg_http_reply (c, 404, "", "%s", json);
             }
+            free (endpoint);
         }
         else
         {
@@ -45,16 +49,129 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
     (void) fn_data;
 }
 
-char *
-extract_lyrics (const char *f_path)
+static struct Endpoint *
+extract_uri (const char *s_url)
+{
+    char            *artist;
+    char            *song;
+    const char      *match = "/api/lyrics/";
+    struct Endpoint *endpoint = NULL;
+
+    // allocate space for return struct
+    endpoint = malloc (sizeof (struct Endpoint));
+    if ( (artist = malloc (1024)) == NULL)
+    {
+        printf ("Malloc failed.\n");
+        return endpoint;
+    }
+
+    if ( (song = malloc (1024)) == NULL)
+    {
+        printf ("Malloc failed.\n");
+        return endpoint;
+    }
+
+    // seek forward past api url (api/lyrics)
+    char *cur;
+    cur = strstr (s_url, match);
+    cur += strlen (match);
+
+    // extract artist name
+    int pos = 0;
+    while (*cur != '/')
+    {
+        // skip over spaces (%20)
+        if (*cur == '%')
+        {
+            // don't duplicate - back to back
+            if (pos > 0 && artist[pos - 1] != '-')
+            {
+                artist[pos] = '-';
+                pos++;
+            }
+            cur += 3;
+            continue;
+        }
+        // handle all other non-alphanumeric chars
+        else if (!isalnum (*cur))
+        {
+            // don't duplicate - back to back
+            if (pos > 0 && artist[pos - 1] != '-')
+            {
+                artist[pos] = '-';
+                pos++;
+            }
+            cur++;
+            continue;
+        }
+        else 
+        {
+            artist[pos] = tolower(*cur);          /* lowercase all text for consistent file access */
+            cur++;
+            pos++;
+        }
+    }
+    // if last character is non-alphanumeric, remove it (otherwise file name invalid)
+    if (!isalnum(artist[pos - 1]))
+        artist[pos - 1] = '\0';
+
+    // extract song name
+    pos = 0;
+    cur++;
+    while (*cur != ' ')
+    {
+        // skip over spaces (%20)
+        if (*cur == '%')
+        {
+            // don't duplicate - back to back
+            if (pos > 0 && song[pos - 1] != '-')
+            {
+                song[pos] = '-';
+                pos++;
+            }
+            cur += 3;
+            continue;
+        }
+        // handle all other non-alphanumeric chars
+        else if (!isalnum (*cur))
+        {
+            // don't duplicate - back to back
+            if (pos > 0 && song[pos - 1] != '-')
+            {
+                song[pos] = '-';
+                pos++;
+            }
+            cur++;
+            continue;
+        }
+        else 
+        {
+            song[pos] = tolower(*cur);          /* lowercase all text for consistent file access */
+            cur++;
+            pos++;
+        }
+    }
+    // if last character is non-alphanumeric, remove it (otherwise file name invalid)
+    if (!isalnum(song[pos - 1]))
+        song[pos - 1] = '\0';
+
+    endpoint->artist = artist;
+    endpoint->song = song;
+    return endpoint;
+}
+
+static char *
+extract_lyrics (struct Endpoint *endpoint)
 {
     FILE          *fp;
+    char           f_path[1024];
     char          *f_data;
     long           f_size;
     char          *s_lyrics;
     const char    *match = "songLyricsV14 iComment-text";
 
     // Open html file and allocate buffer for contents
+    snprintf (f_path, sizeof (f_path), "./cache/%s_%s.html", endpoint->artist, endpoint->song);
     if ( (fp = fopen (f_path, "rb")) == NULL)
     {
         printf ("File couldn't be opened.\n");
@@ -98,14 +215,16 @@ extract_lyrics (const char *f_path)
         return s_lyrics;
     }
 
-    // Scan lyrics and replace any br tags
+    // Scan lyrics and replace any tags
     char *cur_start = cur;
-    int pos = 0;
+    int   pos = 0;
     while (cur < cur_end)
     {
-        if (*cur == '<')              /* start of <br /> tag */
+        if (*cur == '<')              /* start of a tag */
         {
-            cur += 6;                 /* tag is 6 chars long */
+            while (*cur != '>')       /* seek to end of tag */
+                cur++;
+            cur++;                    /* seek past closing tag */
             continue;
         }
         else

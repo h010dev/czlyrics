@@ -2,7 +2,9 @@
 
 #include "czlyrics-spider.h"
 
-static const char              *s_url = "http://www.songlyrics.com/eminem/without-me-lyrics/";
+static const char              *s_host = "www.songlyrics.com";
+static const char              *s_artist;
+static const char              *s_song;
 static int                      err;
 
 static void
@@ -10,22 +12,21 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
 {
     if (ev == MG_EV_CONNECT)
     {
-        struct mg_str host = mg_url_host (s_url);
         mg_printf (c,
-                   "GET %s HTTP/1.0\r\n"
+                   "GET http://%s/%s/%s-lyrics/ HTTP/1.0\r\n"
                    "Host: %.*s\r\n"
                    "\r\n",
-                   mg_url_uri (s_url), (int) host.len, host.ptr);
+                   s_host, s_artist, s_song,
+                   sizeof (s_host), s_host);
     }
     else if (ev == MG_EV_HTTP_MSG)
     {
         struct mg_http_message          *hm;
         hm = (struct mg_http_message *)  ev_data;
         char                             buffer[1024];
-        static const char               *artist = "eminem";
-        static const char               *song = "without-me";
+
         // Write html to file
-        snprintf (buffer, sizeof (buffer), "./cache/%s_%s.html", artist, song);
+        snprintf (buffer, sizeof (buffer), "./cache/%s_%s.html", s_artist, s_song);
         err = mg_file_printf (buffer, "%.*s", (int) hm->body.len, hm->body.ptr) == 0;
 
         c->is_closing = 1;
@@ -39,15 +40,20 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
 }
 
 int
-scrape_lyrics (const char *url)
+scrape_lyrics (const char *artist, const char *song)
 {
     struct mg_mgr mgr;
+    s_artist = artist;
+    s_song = song;
+    char *url = malloc (4096);
+    snprintf (url, 4096, "http://%s/%s/%s-lyrics/", s_host, s_artist, s_song);
     bool done = false;
     mg_log_set ("3");
     mg_mgr_init (&mgr);
-    mg_http_connect (&mgr, s_url, fn, &done);
+    mg_http_connect (&mgr, url, fn, &done);
     while (!done)
         mg_mgr_poll (&mgr, 1000);
     mg_mgr_free (&mgr);
+    free (url);
     return err;
 }

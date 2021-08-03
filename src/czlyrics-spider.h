@@ -3,6 +3,6 @@
 
 #include "external/mongoose/mongoose.h"
 
-int scrape_lyrics (const char *url);
+int scrape_lyrics (const char *artist, const char *song);
 
 #endif /* CZLYRICS_SPIDER_H */

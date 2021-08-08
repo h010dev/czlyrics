@@ -42,7 +42,7 @@ RUN useradd -ms /bin/bash app
 
 ADD src/ /src/
 
-Add entrypoint.sh /src/
+ADD entrypoint.sh /src/
 
 RUN chown -R app:app /src \
     && chmod +x /src/entrypoint.sh

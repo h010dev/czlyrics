@@ -41,8 +41,9 @@ RUN cd /etc/ld.so.conf.d/ \
 RUN useradd -ms /bin/bash app 
 
 ADD src/ /src/
-
 ADD entrypoint.sh /src/
+
+RUN mv /src/Makefile.docker /src/Makefile
 
 RUN chown -R app:app /src \
     && chmod +x /src/entrypoint.sh

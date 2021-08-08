@@ -19,8 +19,8 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
         if (mg_http_match_uri (hm, s_lyrics_endpoint))
         {
             int err;
-            struct Endpoint *endpoint = NULL;
-            endpoint = extract_uri (hm->uri.ptr);
+            struct Endpoint *endpoint = malloc (sizeof (Endpoint));
+            err = extract_uri (hm->uri.ptr, &endpoint);
             if ( (err = scrape_lyrics (endpoint->artist, endpoint->song)) == 0)
             {
                 struct SongData *song_data = malloc (sizeof (SongData));
@@ -70,9 +70,9 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
                               "lyrics", "");
                     mg_http_reply (c, 500, "Content-Type: application/json\r\n", "%s", json);
                 }
-                free (song_data->artist_name);
-                free (song_data->song_title);
                 free (song_data->song_lyrics);
+                free (song_data->song_title);
+                free (song_data->artist_name);
                 free (song_data);
             }
             else 
@@ -98,8 +98,8 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
                           "lyrics", "");
                 mg_http_reply (c, 404, "Content-Type: application/json\r\n", "%s", json);
             }
-            free (endpoint->artist);
             free (endpoint->song);
+            free (endpoint->artist);
             free (endpoint);
         }
         else
@@ -129,28 +129,27 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
     (void) fn_data;
 }
 
-static struct Endpoint *
-extract_uri (const char *s_url)
+int
+extract_uri (const char *s_url, struct Endpoint **endpoint)
 {
-    char            *artist;
-    char            *song;
+    char            *artist = NULL;
+    char            *song = NULL;
     const char      *match = "/api/lyrics/";
-    struct Endpoint *endpoint = NULL;
 
+    printf ("\nPRE-ARTIST: %s\n", artist);
     // allocate space for return struct
-    endpoint = malloc (sizeof (struct Endpoint));
-    if ( (artist = malloc (1024)) == NULL)
+    if ( (artist = calloc (255, sizeof (char))) == NULL)
+    //if ( (artist = malloc (1024)) == NULL)
     {
-        free (endpoint);
         printf ("Malloc failed.\n");
-        return endpoint;
+        return 1;
     }
 
-    if ( (song = malloc (1024)) == NULL)
+    if ( (song = calloc (255, sizeof (char))) == NULL)
+    //if ( (song = malloc (1024)) == NULL)
     {
-        free (endpoint);
         printf ("Malloc failed.\n");
-        return endpoint;
+        return 1;
     }
 
     // seek forward past api url (api/lyrics)
@@ -174,6 +173,7 @@ extract_uri (const char *s_url)
         cur++;
     }
     cur++;
+    printf ("ARTIST NAME = %s\n", artist);
 
     // extract song name
     pos = 0;
@@ -191,9 +191,10 @@ extract_uri (const char *s_url)
         cur++;
     }
 
-    endpoint->artist = artist;
-    endpoint->song = song;
-    return endpoint;
+    (*endpoint)->artist = artist;
+    (*endpoint)->song = song;
+
+    return 0;
 }
 
 int
@@ -345,6 +346,5 @@ extract_lyrics (struct Endpoint *endpoint, struct SongData **song_data)
     (*song_data)->song_title = s_song_title;
     (*song_data)->song_lyrics = s_song_lyrics;
 
-    free (f_data);
     return 0;
 }

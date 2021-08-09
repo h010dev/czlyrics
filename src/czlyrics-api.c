@@ -20,62 +20,35 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
         {
             int err;
             struct Endpoint *endpoint = malloc (sizeof (Endpoint));
-            err = extract_uri (hm->uri.ptr, &endpoint);
-            if ( (err = scrape_lyrics (endpoint->artist, endpoint->song)) == 0)
+            if ( (err = extract_uri (hm->uri.ptr, &endpoint)) != 0 )
             {
-                struct SongData *song_data = malloc (sizeof (SongData));
-                if ( (err = extract_lyrics (endpoint, &song_data) == 0))
-                {
-                    mjson_printf (mjson_print_dynamic_buf, &json, 
-                            "{"
-                              "%Q:{"
-                                "%Q:%d,"
-                                "%Q:%Q"
-                              "},"
-                              "%Q:{"
-                                "%Q:%Q,"
-                                "%Q:%Q,"
-                                "%Q:%Q"
-                              "}"
-                            "}", 
-                            "error", 
-                              "code", 200, 
-                              "message", "Success",
-                            "data", 
-                              "artist", song_data->artist_name,
-                              "song", song_data->song_title,
-                              "lyrics", song_data->song_lyrics);
-                    mg_http_reply (c, 200, "Content-Type: application/json\r\n", "%s", json);
-                }
-                else
-                {
-                    mjson_printf (mjson_print_dynamic_buf, &json, 
-                            "{"
-                              "%Q:{"
-                                "%Q:%d,"
-                                "%Q:%Q"
-                              "},"
-                              "%Q:{"
-                                "%Q:%Q,"
-                                "%Q:%Q,"
-                                "%Q:%Q"
-                              "}"
-                            "}", 
-                            "error", 
-                              "code", 500, 
-                              "message", "Internal Server Error",
-                            "data", 
-                              "artist", "",
-                              "song", "",
-                              "lyrics", "");
-                    mg_http_reply (c, 500, "Content-Type: application/json\r\n", "%s", json);
-                }
-                free (song_data->song_lyrics);
-                free (song_data->song_title);
-                free (song_data->artist_name);
-                free (song_data);
+                mjson_printf (mjson_print_dynamic_buf, &json, 
+                        "{"
+                          "%Q:{"
+                            "%Q:%d,"
+                            "%Q:%Q"
+                          "},"
+                          "%Q:{"
+                            "%Q:%Q,"
+                            "%Q:%Q,"
+                            "%Q:%Q"
+                          "}"
+                        "}", 
+                        "error", 
+                          "code", 500, 
+                          "message", "Internal Server Error",
+                        "data", 
+                          "artist", "",
+                          "song", "",
+                          "lyrics", "");
+                mg_http_reply (c, 500, "Content-Type: application/json\r\n", "%s", json);
+
+                free (endpoint->song);
+                free (endpoint->artist);
+                free (endpoint);
+                return;
             }
-            else 
+            if ( (err = scrape_lyrics (endpoint->artist, endpoint->song)) != 0 )
             {
                 mjson_printf (mjson_print_dynamic_buf, &json, 
                         "{"
@@ -97,7 +70,63 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
                           "song", "",
                           "lyrics", "");
                 mg_http_reply (c, 404, "Content-Type: application/json\r\n", "%s", json);
+
+                free (endpoint->song);
+                free (endpoint->artist);
+                free (endpoint);
+                return;
             }
+            struct SongData *song_data = malloc (sizeof (SongData));
+            if ( (err = extract_lyrics (endpoint, &song_data) != 0))
+            {
+                mjson_printf (mjson_print_dynamic_buf, &json, 
+                        "{"
+                          "%Q:{"
+                            "%Q:%d,"
+                            "%Q:%Q"
+                          "},"
+                          "%Q:{"
+                            "%Q:%Q,"
+                            "%Q:%Q,"
+                            "%Q:%Q"
+                          "}"
+                        "}", 
+                        "error", 
+                          "code", 500, 
+                          "message", "Internal Server Error",
+                        "data", 
+                          "artist", "",
+                          "song", "",
+                          "lyrics", "");
+                mg_http_reply (c, 500, "Content-Type: application/json\r\n", "%s", json);
+            }
+            else
+            {
+                mjson_printf (mjson_print_dynamic_buf, &json, 
+                        "{"
+                          "%Q:{"
+                            "%Q:%d,"
+                            "%Q:%Q"
+                          "},"
+                          "%Q:{"
+                            "%Q:%Q,"
+                            "%Q:%Q,"
+                            "%Q:%Q"
+                          "}"
+                        "}", 
+                        "error", 
+                          "code", 200, 
+                          "message", "Success",
+                        "data", 
+                          "artist", song_data->artist_name,
+                          "song", song_data->song_title,
+                          "lyrics", song_data->song_lyrics);
+                mg_http_reply (c, 200, "Content-Type: application/json\r\n", "%s", json);
+            }
+            free (song_data->song_lyrics);
+            free (song_data->song_title);
+            free (song_data->artist_name);
+            free (song_data);
             free (endpoint->song);
             free (endpoint->artist);
             free (endpoint);

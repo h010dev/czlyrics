@@ -4,4 +4,5 @@ source /etc/environment \
   && cd /src/ \
   && make clean \
   && make \
-  && ./czlyrics
+  && touch app.log \
+  && ./czlyrics >> app.log

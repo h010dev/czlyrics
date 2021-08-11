@@ -41,7 +41,7 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
                           "artist", "",
                           "song", "",
                           "lyrics", "");
-                mg_http_reply (c, 500, "Content-Type: application/json\r\n", "%s", json);
+                mg_http_reply (c, 500, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", json);
 
                 free (endpoint->song);
                 free (endpoint->artist);
@@ -69,7 +69,7 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
                           "artist", "",
                           "song", "",
                           "lyrics", "");
-                mg_http_reply (c, 404, "Content-Type: application/json\r\n", "%s", json);
+                mg_http_reply (c, 404, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", json);
 
                 free (endpoint->song);
                 free (endpoint->artist);
@@ -98,7 +98,7 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
                           "artist", "",
                           "song", "",
                           "lyrics", "");
-                mg_http_reply (c, 500, "Content-Type: application/json\r\n", "%s", json);
+                mg_http_reply (c, 500, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", json);
             }
             else
             {
@@ -121,7 +121,7 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
                           "artist", song_data->artist_name,
                           "song", song_data->song_title,
                           "lyrics", song_data->song_lyrics);
-                mg_http_reply (c, 200, "Content-Type: application/json\r\n", "%s", json);
+                mg_http_reply (c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", json);
             }
             free (song_data->song_lyrics);
             free (song_data->song_title);
@@ -152,7 +152,7 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
                       "artist", "",
                       "song", "",
                       "lyrics", "");
-            mg_http_reply (c, 400, "Content-Type: application/json\r\n", "%s", json);
+            mg_http_reply (c, 400, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", json);
         }
     }
     (void) fn_data;

@@ -2,11 +2,22 @@
 
 #include "czlyrics-spider.h"
 
-static const char              *s_user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.157 Safari/537.36";
-static const char              *s_host = "www.azlyrics.com";
-static const char              *s_artist;
-static const char              *s_song;
-static int                      err;
+static const char *s_user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.157 Safari/537.36";
+static const char *s_host       = "www.azlyrics.com";
+static const char *s_artist;
+static const char *s_song;
+static int         err;
+
+static void
+send_request (struct mg_connection *c)
+{
+    mg_printf (c,
+               "GET https://%s/lyrics/%s/%s.html HTTP/1.0\r\n"
+               "Host: %s\r\n"
+               "User-Agent: %s\r\n"
+               "\r\n",
+               s_host, s_artist, s_song, s_host, s_user_agent);
+}
 
 static void
 fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
@@ -15,14 +26,7 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
     {
         struct mg_tls_opts opts = {.srvname = s_host};
         mg_tls_init(c, &opts);
-        mg_printf (c,
-                   "GET https://%s/lyrics/%s/%s.html HTTP/1.0\r\n"
-                   "Host: %s\r\n"
-                   "User-Agent: %s\r\n"
-                   "\r\n",
-                   s_host, s_artist, s_song,
-                   s_host,
-                   s_user_agent);
+        send_request (c);
     }
     else if (ev == MG_EV_HTTP_MSG)
     {
@@ -37,10 +41,7 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
             // Write html to file
             char  buffer[1024];
             snprintf (buffer, sizeof (buffer), "./cache/%s_%s.html", s_artist, s_song);
-            if ( (err = mg_file_printf (buffer, "%.*s", (int) hm->body.len, hm->body.ptr)) != 0 )
-            {
-                printf ("Couldn't save file\n");
-            }
+            err = mg_file_printf (buffer, "%.*s", (int) hm->body.len, hm->body.ptr) == 0;
         }
         else
             err = 1;

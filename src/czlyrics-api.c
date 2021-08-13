@@ -7,6 +7,23 @@
 
 static const char *s_lyrics_endpoint = "/api/lyrics/?*/?*/";
 
+static void
+free_endpoint (struct Endpoint **endpoint)
+{
+    free ((*endpoint)->song);
+    free ((*endpoint)->artist);
+    free (*endpoint);
+}
+
+static void
+free_song_data (struct SongData **song_data)
+{
+    free ((*song_data)->song_lyrics);
+    free ((*song_data)->song_title);
+    free ((*song_data)->artist_name);
+    free (*song_data);
+}
+
 void
 fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
 {
@@ -20,138 +37,60 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
         {
             int err;
             struct Endpoint *endpoint = malloc (sizeof (Endpoint));
+
+            // Extract artist and song name from URI 
             if ( (err = extract_uri (hm->uri.ptr, &endpoint)) != 0 )
             {
-                mjson_printf (mjson_print_dynamic_buf, &json, 
-                        "{"
-                          "%Q:{"
-                            "%Q:%d,"
-                            "%Q:%Q"
-                          "},"
-                          "%Q:{"
-                            "%Q:%Q,"
-                            "%Q:%Q,"
-                            "%Q:%Q"
-                          "}"
-                        "}", 
-                        "error", 
-                          "code", 500, 
-                          "message", "Internal Server Error",
-                        "data", 
-                          "artist", "",
-                          "song", "",
-                          "lyrics", "");
+                mjson_printf (mjson_print_dynamic_buf, &json,
+                        "{%Q:{%Q:%d,%Q:%Q},%Q:{%Q:%Q,%Q:%Q,%Q:%Q}}", 
+                        "error", "code", 500, "message", "Internal Server Error",
+                        "data", "artist", "", "song", "", "lyrics", "");
                 mg_http_reply (c, 500, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", json);
 
-                free (endpoint->song);
-                free (endpoint->artist);
-                free (endpoint);
                 return;
             }
+
+            // Scrape lyrics from target site
             if ( (err = scrape_lyrics (endpoint->artist, endpoint->song)) != 0 )
             {
                 mjson_printf (mjson_print_dynamic_buf, &json, 
-                        "{"
-                          "%Q:{"
-                            "%Q:%d,"
-                            "%Q:%Q"
-                          "},"
-                          "%Q:{"
-                            "%Q:%Q,"
-                            "%Q:%Q,"
-                            "%Q:%Q"
-                          "}"
-                        "}", 
-                        "error", 
-                          "code", 404, 
-                          "message", "Song not found",
-                        "data", 
-                          "artist", "",
-                          "song", "",
-                          "lyrics", "");
+                        "{%Q:{%Q:%d,%Q:%Q},%Q:{%Q:%Q,%Q:%Q,%Q:%Q}}", 
+                        "error", "code", 404, "message", "Song not found",
+                        "data", "artist", "", "song", "", "lyrics", "");
                 mg_http_reply (c, 404, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", json);
 
-                free (endpoint->song);
-                free (endpoint->artist);
-                free (endpoint);
+                free_endpoint (&endpoint);
                 return;
             }
+
+            // Extract lyrics and send back to client
             struct SongData *song_data = malloc (sizeof (SongData));
             if ( (err = extract_lyrics (endpoint, &song_data) != 0))
             {
                 mjson_printf (mjson_print_dynamic_buf, &json, 
-                        "{"
-                          "%Q:{"
-                            "%Q:%d,"
-                            "%Q:%Q"
-                          "},"
-                          "%Q:{"
-                            "%Q:%Q,"
-                            "%Q:%Q,"
-                            "%Q:%Q"
-                          "}"
-                        "}", 
-                        "error", 
-                          "code", 500, 
-                          "message", "Internal Server Error",
-                        "data", 
-                          "artist", "",
-                          "song", "",
-                          "lyrics", "");
+                        "{%Q:{%Q:%d,%Q:%Q},%Q:{%Q:%Q,%Q:%Q,%Q:%Q}}", 
+                        "error", "code", 500, "message", "Internal Server Error",
+                        "data", "artist", "", "song", "", "lyrics", "");
                 mg_http_reply (c, 500, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", json);
             }
             else
             {
                 mjson_printf (mjson_print_dynamic_buf, &json, 
-                        "{"
-                          "%Q:{"
-                            "%Q:%d,"
-                            "%Q:%Q"
-                          "},"
-                          "%Q:{"
-                            "%Q:%Q,"
-                            "%Q:%Q,"
-                            "%Q:%Q"
-                          "}"
-                        "}", 
-                        "error", 
-                          "code", 200, 
-                          "message", "Success",
-                        "data", 
-                          "artist", song_data->artist_name,
-                          "song", song_data->song_title,
-                          "lyrics", song_data->song_lyrics);
+                        "{%Q:{%Q:%d,%Q:%Q},%Q:{%Q:%Q,%Q:%Q,%Q:%Q}}", 
+                        "error", "code", 200, "message", "Success",
+                        "data", "artist", song_data->artist_name, "song", song_data->song_title,
+                        "lyrics", song_data->song_lyrics);
                 mg_http_reply (c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", json);
             }
-            free (song_data->song_lyrics);
-            free (song_data->song_title);
-            free (song_data->artist_name);
-            free (song_data);
-            free (endpoint->song);
-            free (endpoint->artist);
-            free (endpoint);
+            free_song_data (&song_data);
+            free_endpoint (&endpoint);
         }
         else
         {
             mjson_printf (mjson_print_dynamic_buf, &json, 
-                    "{"
-                      "%Q:{"
-                        "%Q:%d,"
-                        "%Q:%Q"
-                      "},"
-                      "%Q:{"
-                        "%Q:%Q,"
-                        "%Q:%Q,"
-                        "%Q:%Q"
-                      "}"
-                    "}", 
-                    "error", 
-                      "code", 400, 
-                      "message", "Bad request -- Usage: /api/lyrics/{artist}/{song}/",
-                    "data", 
-                      "artist", "",
-                      "song", "",
-                      "lyrics", "");
+                    "{%Q:{%Q:%d,%Q:%Q},%Q:{%Q:%Q,%Q:%Q,%Q:%Q}}", 
+                    "error", "code", 400, "message", "Bad request -- Usage: /api/lyrics/{artist}/{song}/",
+                    "data", "artist", "", "song", "", "lyrics", "");
             mg_http_reply (c, 400, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", json);
         }
     }
@@ -161,23 +100,20 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
 int
 extract_uri (const char *s_url, struct Endpoint **endpoint)
 {
-    char            *artist = NULL;
-    char            *song = NULL;
-    const char      *match = "/api/lyrics/";
+    char       *artist = NULL;
+    char       *song   = NULL;
+    const char *match  = "/api/lyrics/";
 
-    printf ("\nPRE-ARTIST: %s\n", artist);
     // allocate space for return struct
     if ( (artist = calloc (255, sizeof (char))) == NULL)
-    //if ( (artist = malloc (1024)) == NULL)
     {
-        printf ("Malloc failed.\n");
+        printf ("Failed to allocate space for artist.\n");
         return 1;
     }
 
     if ( (song = calloc (255, sizeof (char))) == NULL)
-    //if ( (song = malloc (1024)) == NULL)
     {
-        printf ("Malloc failed.\n");
+        printf ("Failed to allocate space for song.\n");
         return 1;
     }
 
@@ -230,8 +166,8 @@ int
 extract_lyrics (struct Endpoint *endpoint, struct SongData **song_data)
 {
     // Open html file 
-    FILE          *fp;
-    char           f_path[1024];
+    FILE *fp;
+    char  f_path[1024];
 
     snprintf (f_path, sizeof (f_path), "./cache/%s_%s.html", endpoint->artist, endpoint->song);
     if ( (fp = fopen (f_path, "rb")) == NULL)
@@ -241,8 +177,8 @@ extract_lyrics (struct Endpoint *endpoint, struct SongData **song_data)
     }
 
     // Allocate buffer for file contents
-    char          *f_data;
-    long           f_size;
+    char *f_data;
+    long  f_size;
 
     fseek (fp, 0L, SEEK_END);
     f_size = ftell (fp);
@@ -252,7 +188,7 @@ extract_lyrics (struct Endpoint *endpoint, struct SongData **song_data)
     {
         fclose (fp);
         free (f_data);
-        printf ("Calloc failed.\n");
+        printf ("Failed to allocate space for file.\n");
         return 1;
     }
 
@@ -284,7 +220,7 @@ extract_lyrics (struct Endpoint *endpoint, struct SongData **song_data)
     if ( (s_artist_name = calloc (1, (char *) cur_end - (char *) cur + 1 )) == NULL )
     {
         free (f_data);
-        printf ("Calloc failed.\n");
+        printf ("Failed to allocate space for artist name.\n");
         return 1;
     }
 
@@ -296,7 +232,6 @@ extract_lyrics (struct Endpoint *endpoint, struct SongData **song_data)
         cur++;
         pos++;
     }
-    printf ("ARTIST NAME = %s\n", s_artist_name);
 
     // Seek to song title 
     char       *s_song_title;
@@ -312,7 +247,7 @@ extract_lyrics (struct Endpoint *endpoint, struct SongData **song_data)
     if ( (s_song_title = calloc (1, (char *) cur_end - (char *) cur + 1 )) == NULL )
     {
         free (f_data);
-        printf ("Calloc failed.\n");
+        printf ("Failed to allocate space for song title.\n");
         return 1;
     }
 
@@ -324,7 +259,6 @@ extract_lyrics (struct Endpoint *endpoint, struct SongData **song_data)
         cur++;
         pos++;
     }
-    printf ("SONG TITLE = %s\n", s_song_title);
 
     // Seek to song lyrics
     char       *s_song_lyrics;
@@ -339,7 +273,7 @@ extract_lyrics (struct Endpoint *endpoint, struct SongData **song_data)
     if ( (s_song_lyrics = calloc (1, (char *) cur_end - (char *) cur + 1)) == NULL)
     {
         free (f_data);
-        printf ("Calloc failed.\n");
+        printf ("Failed to allocate space for lyrics.\n");
         return 1;
     }
 
@@ -368,9 +302,7 @@ extract_lyrics (struct Endpoint *endpoint, struct SongData **song_data)
         }
         pos++;
     }
-    printf ("SONG LYRICS = %s\n", s_song_lyrics);
 
-    // Fill in song data strcut
     (*song_data)->artist_name = s_artist_name;
     (*song_data)->song_title = s_song_title;
     (*song_data)->song_lyrics = s_song_lyrics;

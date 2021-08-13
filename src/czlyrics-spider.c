@@ -37,7 +37,10 @@ fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
             // Write html to file
             char  buffer[1024];
             snprintf (buffer, sizeof (buffer), "./cache/%s_%s.html", s_artist, s_song);
-            err = mg_file_printf (buffer, "%.*s", (int) hm->body.len, hm->body.ptr) == 0;
+            if ( (err = mg_file_printf (buffer, "%.*s", (int) hm->body.len, hm->body.ptr)) != 0 )
+            {
+                printf ("Couldn't save file\n");
+            }
         }
         else
             err = 1;

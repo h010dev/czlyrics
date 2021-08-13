@@ -1,0 +1,23 @@
+USAGE: /api/lyrics/{artist}/{song}/
+
+    - Must include trailing forward slash
+    - Can handle spaces, non-alphanumeric characters
+
+RESPONSE FORMAT: 
+    {
+      "error":
+      {
+        "code": int,
+        "message": str,
+      },
+      "data":
+      {
+        "artist": str,
+        "song": str,
+        "lyrics": str
+      }
+    }
+
+    - JSON encoded
+    - Codes include: 200, 400, 404, 500
+    - Data members are empty strings if not found or there is an error

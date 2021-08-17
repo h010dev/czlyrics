@@ -1,100 +1,76 @@
-#include "czlyrics-api.h"
-
 #include "external/mjson/mjson.h"
 #include "external/mongoose/mongoose.h"
 
+#include "czlyrics-api.h"
 #include "czlyrics-spider.h"
 
-static const char *s_lyrics_endpoint = "/api/lyrics/?*/?*/";
+const char* const CZ_API_ENDPOINT            = "/api/lyrics/?*/?*/";
+const char* const CZ_RESPONSE_HEADER_OPTIONS = "Content-Type: application/json\r\n"
+                                               "Access-Control-Allow-Origin: *\r\n";
+const char* const CZ_HTTP_MSG_OK             = "Success";
+const char* const CZ_HTTP_MSG_BAD_REQUEST    = "Bad request -- Usage: /api/lyrics/{artist}/{song}/";
+const char* const CZ_HTTP_MSG_NOT_FOUND      = "Song not found";
+const char* const CZ_HTTP_MSG_SERVER_ERROR   = "Internal Server Error";
 
-static void
-free_endpoint (struct Endpoint **endpoint)
+void
+fn_api (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
 {
-    free ((*endpoint)->song);
-    free ((*endpoint)->artist);
-    free (*endpoint);
-}
+    if (ev == MG_EV_HTTP_MSG)
+        cz_handle_request (c, ev_data);
 
-static void
-free_song_data (struct SongData **song_data)
-{
-    free ((*song_data)->song_lyrics);
-    free ((*song_data)->song_title);
-    free ((*song_data)->artist_name);
-    free (*song_data);
+    (void) fn_data;
 }
 
 void
-fn (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
+cz_handle_request (struct mg_connection *c, void *ev_data)
 {
-    if (ev == MG_EV_HTTP_MSG)
+    struct mg_http_message *hm;
+    struct SongData        *song_data;
+
+    hm        = (struct mg_http_message *) ev_data;
+    song_data = NULL;
+
+    if (mg_http_match_uri (hm, CZ_API_ENDPOINT))
+        cz_get_lyrics (c, hm);
+    else
+        send_response (c, 400, song_data);
+}
+
+void
+cz_get_lyrics (struct mg_connection *c, struct mg_http_message *hm)
+{
+    int              cz_errno;
+    struct Endpoint *endpoint;
+    struct SongData *song_data;
+
+    endpoint  = malloc (sizeof (Endpoint));
+    song_data = NULL;
+
+    // Extract artist and song name from URI 
+    if ( (cz_errno = extract_uri (hm->uri.ptr, &endpoint)) != 0 )
     {
-        struct mg_http_message *hm = (struct mg_http_message *) ev_data;
-        char                   *json = NULL;
-
-        /* /api/lyrics/{artist}/{song}/ */
-        if (mg_http_match_uri (hm, s_lyrics_endpoint))
-        {
-            int err;
-            struct Endpoint *endpoint = malloc (sizeof (Endpoint));
-
-            // Extract artist and song name from URI 
-            if ( (err = extract_uri (hm->uri.ptr, &endpoint)) != 0 )
-            {
-                mjson_printf (mjson_print_dynamic_buf, &json,
-                        "{%Q:{%Q:%d,%Q:%Q},%Q:{%Q:%Q,%Q:%Q,%Q:%Q}}", 
-                        "error", "code", 500, "message", "Internal Server Error",
-                        "data", "artist", "", "song", "", "lyrics", "");
-                mg_http_reply (c, 500, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", json);
-
-                return;
-            }
-
-            // Scrape lyrics from target site
-            if ( (err = scrape_lyrics (endpoint->artist, endpoint->song)) != 0 )
-            {
-                mjson_printf (mjson_print_dynamic_buf, &json, 
-                        "{%Q:{%Q:%d,%Q:%Q},%Q:{%Q:%Q,%Q:%Q,%Q:%Q}}", 
-                        "error", "code", 404, "message", "Song not found",
-                        "data", "artist", "", "song", "", "lyrics", "");
-                mg_http_reply (c, 404, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", json);
-
-                free_endpoint (&endpoint);
-                return;
-            }
-
-            // Extract lyrics and send back to client
-            struct SongData *song_data = malloc (sizeof (SongData));
-            if ( (err = extract_lyrics (endpoint, &song_data) != 0))
-            {
-                mjson_printf (mjson_print_dynamic_buf, &json, 
-                        "{%Q:{%Q:%d,%Q:%Q},%Q:{%Q:%Q,%Q:%Q,%Q:%Q}}", 
-                        "error", "code", 500, "message", "Internal Server Error",
-                        "data", "artist", "", "song", "", "lyrics", "");
-                mg_http_reply (c, 500, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", json);
-            }
-            else
-            {
-                mjson_printf (mjson_print_dynamic_buf, &json, 
-                        "{%Q:{%Q:%d,%Q:%Q},%Q:{%Q:%Q,%Q:%Q,%Q:%Q}}", 
-                        "error", "code", 200, "message", "Success",
-                        "data", "artist", song_data->artist_name, "song", song_data->song_title,
-                        "lyrics", song_data->song_lyrics);
-                mg_http_reply (c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", json);
-            }
-            free_song_data (&song_data);
-            free_endpoint (&endpoint);
-        }
-        else
-        {
-            mjson_printf (mjson_print_dynamic_buf, &json, 
-                    "{%Q:{%Q:%d,%Q:%Q},%Q:{%Q:%Q,%Q:%Q,%Q:%Q}}", 
-                    "error", "code", 400, "message", "Bad request -- Usage: /api/lyrics/{artist}/{song}/",
-                    "data", "artist", "", "song", "", "lyrics", "");
-            mg_http_reply (c, 400, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", json);
-        }
+        send_response (c, 500, song_data);
+        return;
     }
-    (void) fn_data;
+
+    // Scrape lyrics from target site
+    if ( (cz_errno = scrape_lyrics (endpoint->artist, endpoint->song)) != 0 )
+    {
+        send_response (c, 404, song_data);
+        free_endpoint (&endpoint);
+        return;
+    }
+
+    // Extract lyrics and send back to client
+
+    song_data = malloc (sizeof (SongData));
+    if ( (cz_errno = extract_lyrics (endpoint, &song_data) != 0))
+        send_response (c, 500, song_data);
+    else
+        send_response (c, 200, song_data);
+
+    free_song_data (&song_data);
+    free_endpoint (&endpoint);
 }
 
 int
@@ -309,3 +285,73 @@ extract_lyrics (struct Endpoint *endpoint, struct SongData **song_data)
 
     return 0;
 }
+
+void
+create_response_body (int http_err_code, const char *message, struct SongData *song_data, char **response_body)
+{
+    char *artist = "";
+    char *song   = "";
+    char *lyrics = "";
+    char *json   = NULL;
+
+    if (song_data != NULL)
+    {
+        artist = strdup (song_data->artist_name);
+        song = strdup (song_data->song_title);
+        lyrics = strdup (song_data->song_lyrics);
+    }
+
+    mjson_printf (mjson_print_dynamic_buf, &json,
+                  "{%Q:{%Q:%d,%Q:%Q},%Q:{%Q:%Q,%Q:%Q,%Q:%Q}}", 
+                  "error", "code", http_err_code, "message", message,
+                  "data", "artist", artist, "song", song, "lyrics", lyrics);
+
+    *response_body = strdup (json);
+    free (json);
+}
+
+void
+send_response (struct mg_connection *c, int http_err_code, struct SongData *song_data)
+{
+    char *response_body;
+
+    response_body = "";
+
+    switch (http_err_code)
+    {
+        case OK:
+            create_response_body (http_err_code, CZ_HTTP_MSG_OK, song_data, &response_body);
+            break;
+        case BAD_REQUEST:
+            create_response_body (http_err_code, CZ_HTTP_MSG_BAD_REQUEST, song_data, &response_body);
+            break;
+        case NOT_FOUND:
+            create_response_body (http_err_code, CZ_HTTP_MSG_NOT_FOUND, song_data, &response_body);
+            break;
+        case SERVER_ERROR:
+            create_response_body (http_err_code, CZ_HTTP_MSG_SERVER_ERROR, song_data, &response_body);
+            break;
+        default:
+            break;
+    }
+
+    mg_http_reply (c, http_err_code, CZ_RESPONSE_HEADER_OPTIONS, "%s", response_body);
+}
+
+void
+free_endpoint (struct Endpoint **endpoint)
+{
+    free ((*endpoint)->song);
+    free ((*endpoint)->artist);
+    free (*endpoint);
+}
+
+void
+free_song_data (struct SongData **song_data)
+{
+    free ((*song_data)->song_lyrics);
+    free ((*song_data)->song_title);
+    free ((*song_data)->artist_name);
+    free (*song_data);
+}
+

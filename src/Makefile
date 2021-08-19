@@ -5,7 +5,7 @@ INC = -I/external/mongoose -I/external/mjson -I/usr/include/openssl
 LIBS = -L/usr/lib/
 LDFLAGS = -lssl -lcrypto
 
-SRC = main.c czlyrics-api.c czlyrics-spider.c
+SRC = main.c czlyrics-api.c czlyrics-spider.c czlyrics-parser.c
 OBJS = $(SRC:.c=.o)
 
 all: czlyrics
@@ -18,6 +18,9 @@ main.o: main.c
 
 czlyrics-api.o: czlyrics-api.c czlyrics-api.h
 	$(CC) -c czlyrics-api.c
+
+czlyrics-parser.o: czlyrics-parser.c czlyrics-parser.h
+	$(CC) -c czlyrics-parser.c
 
 czlyrics-spider.o: czlyrics-spider.c czlyrics-spider.h
 	$(CC) -c czlyrics-spider.c

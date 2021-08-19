@@ -5,4 +5,5 @@ source /etc/environment \
   && make clean \
   && make \
   && touch app.log \
+  && mkdir cache \
   && ./czlyrics >> app.log

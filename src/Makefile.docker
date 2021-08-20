@@ -11,7 +11,7 @@ OBJS = $(SRC:.c=.o)
 all: czlyrics
 
 czlyrics: $(OBJS) 
-	$(CC) $(OBJS) -o $(@F) $(DEPS) $(FLAGS) $(INC) $(LIBS) $(LDFLAGS) -Wall -Wpedantic -Wextra
+	$(CC) $(OBJS) -o $(@F) $(DEPS) $(FLAGS) $(INC) $(LIBS) $(LDFLAGS) -Wall -Werror -Wpedantic -Wextra
 
 main.o: main.c
 	$(CC) -c main.c

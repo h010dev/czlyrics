@@ -8,25 +8,29 @@ const char* const TARGET_HOST = "www.azlyrics.com";
 const char* const URL_FMT     = "https://www.azlyrics.com/lyrics/%s/%s.html";
 const char* const OK_CODE     = "200";
 
-void
-send_request (struct mg_connection *c, char *s_artist, char *s_song)
+int
+scrape_lyrics (const char *artist, const char *song)
 {
-    mg_printf (c,
-               "GET https://%s/lyrics/%s/%s.html HTTP/1.0\r\n"
-               "Host: %s\r\n"
-               "User-Agent: %s\r\n"
-               "\r\n",
-               TARGET_HOST, s_artist, s_song, TARGET_HOST, USER_AGENT);
-}
+    struct mg_mgr        mgr;
+    char                 url[1024];
+    struct FnSpiderData *data;
+    int                  cz_errno;
 
-void
-cz_handle_response (void)
-{
-}
+    data = new_fn_spider_data ((char *) artist, (char *) song);
 
-void
-cz_write_to_file (void)
-{
+    snprintf (url, 1024, URL_FMT, artist, song);
+
+    mg_log_set ("3");
+    mg_mgr_init (&mgr);
+    mg_http_connect (&mgr, url, fn_spider, data);
+    while (!(data->done))
+        mg_mgr_poll (&mgr, 1000);
+    mg_mgr_free (&mgr);
+
+    cz_errno = data->cz_errno;
+    free_fn_spider_data (&data);
+
+    return cz_errno;
 }
 
 void
@@ -74,11 +78,24 @@ fn_spider (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
 }
 
 void
-free_fn_spider_data (struct FnSpiderData **data)
+send_request (struct mg_connection *c, char *s_artist, char *s_song)
 {
-    free ((*data)->s_artist);
-    free ((*data)->s_song);
-    free (*data);
+    mg_printf (c,
+               "GET https://%s/lyrics/%s/%s.html HTTP/1.0\r\n"
+               "Host: %s\r\n"
+               "User-Agent: %s\r\n"
+               "\r\n",
+               TARGET_HOST, s_artist, s_song, TARGET_HOST, USER_AGENT);
+}
+
+void
+cz_handle_response (void)
+{
+}
+
+void
+cz_write_to_file (void)
+{
 }
 
 struct FnSpiderData *
@@ -95,27 +112,10 @@ new_fn_spider_data (char *artist, char *song)
     return data;
 }
 
-int
-scrape_lyrics (const char *artist, const char *song)
+void
+free_fn_spider_data (struct FnSpiderData **data)
 {
-    struct mg_mgr        mgr;
-    char                 url[1024];
-    struct FnSpiderData *data;
-    int                  cz_errno;
-
-    data = new_fn_spider_data ((char *) artist, (char *) song);
-
-    snprintf (url, 1024, URL_FMT, artist, song);
-
-    mg_log_set ("3");
-    mg_mgr_init (&mgr);
-    mg_http_connect (&mgr, url, fn_spider, data);
-    while (!(data->done))
-        mg_mgr_poll (&mgr, 1000);
-    mg_mgr_free (&mgr);
-
-    cz_errno = data->cz_errno;
-    free_fn_spider_data (&data);
-
-    return cz_errno;
+    free ((*data)->s_artist);
+    free ((*data)->s_song);
+    free (*data);
 }

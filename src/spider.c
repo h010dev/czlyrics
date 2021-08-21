@@ -1,12 +1,14 @@
-#include "external/mongoose/mongoose.h"
+#include "spider-internal.h"
 
-#include "czlyrics-spider.h"
+#include "external/mongoose/mongoose.h"
 
 const char* const USER_AGENT  = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
                                 "Chrome/44.0.2403.157 Safari/537.36";
 const char* const TARGET_HOST = "www.azlyrics.com";
 const char* const URL_FMT     = "https://www.azlyrics.com/lyrics/%s/%s.html";
 const char* const OK_CODE     = "200";
+
+/* PUBLIC METHODS */
 
 int
 scrape_lyrics (const char *artist, const char *song)
@@ -33,7 +35,9 @@ scrape_lyrics (const char *artist, const char *song)
     return cz_errno;
 }
 
-void
+/* INTERNAL METHODS */
+
+static void
 fn_spider (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
 {
     if (ev == MG_EV_CONNECT)
@@ -77,7 +81,7 @@ fn_spider (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
     }
 }
 
-void
+static void
 send_request (struct mg_connection *c, char *s_artist, char *s_song)
 {
     mg_printf (c,
@@ -88,17 +92,17 @@ send_request (struct mg_connection *c, char *s_artist, char *s_song)
                TARGET_HOST, s_artist, s_song, TARGET_HOST, USER_AGENT);
 }
 
-void
-cz_handle_response (void)
+static void
+handle_response (void)
 {
 }
 
-void
-cz_write_to_file (void)
+static void
+write_to_file (void)
 {
 }
 
-struct FnSpiderData *
+static struct FnSpiderData *
 new_fn_spider_data (char *artist, char *song)
 {
     struct FnSpiderData *data;
@@ -112,7 +116,7 @@ new_fn_spider_data (char *artist, char *song)
     return data;
 }
 
-void
+static void
 free_fn_spider_data (struct FnSpiderData **data)
 {
     free ((*data)->s_artist);

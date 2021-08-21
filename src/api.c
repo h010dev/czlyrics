@@ -1,44 +1,48 @@
+#include "api-internal.h"
+
 #include "external/mjson/mjson.h"
 #include "external/mongoose/mongoose.h"
 
-#include "czlyrics-api.h"
-#include "czlyrics-spider.h"
-#include "czlyrics-parser.h"
+#include "include/spider.h"
+#include "include/parser.h"
 
-const char* const CZ_API_ENDPOINT            = "/api/lyrics/?*/?*/";
-const char* const CZ_RESPONSE_HEADER_OPTIONS = "Content-Type: application/json\r\n"
-                                               "Access-Control-Allow-Origin: *\r\n";
-const char* const CZ_HTTP_MSG_OK             = "Success";
-const char* const CZ_HTTP_MSG_BAD_REQUEST    = "Bad request -- Usage: /api/lyrics/{artist}/{song}/";
-const char* const CZ_HTTP_MSG_NOT_FOUND      = "Song not found";
-const char* const CZ_HTTP_MSG_SERVER_ERROR   = "Internal Server Error";
+const char* const API_ENDPOINT            = "/api/lyrics/?*/?*/";
+const char* const RESPONSE_HEADER_OPTIONS = "Content-Type: application/json\r\n"
+                                            "Access-Control-Allow-Origin: *\r\n";
+const char* const HTTP_MSG_OK             = "Success";
+const char* const HTTP_MSG_BAD_REQUEST    = "Bad request -- Usage: /api/lyrics/{artist}/{song}/";
+const char* const HTTP_MSG_NOT_FOUND      = "Song not found";
+const char* const HTTP_MSG_SERVER_ERROR   = "Internal Server Error";
+
+/* PUBLIC METHODS */
 
 void
 fn_api (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
 {
     if (ev == MG_EV_HTTP_MSG)
-        cz_handle_request (c, ev_data);
+        handle_request (c, (struct mg_http_message *) ev_data);
 
     (void) fn_data;
 }
 
-void
-cz_handle_request (struct mg_connection *c, void *ev_data)
+/* INTERNAL METHODS */
+
+static void
+handle_request (struct mg_connection *c, struct mg_http_message *hm)
 {
-    struct mg_http_message *hm;
-    struct SongData        *song_data;
-
-    hm        = (struct mg_http_message *) ev_data;
-    song_data = NULL;
-
-    if (mg_http_match_uri (hm, CZ_API_ENDPOINT))
-        cz_get_lyrics (c, hm);
+    if (mg_http_match_uri (hm, API_ENDPOINT))
+        get_lyrics (c, hm);
     else
+    {
+        struct SongData *song_data;
+
+        song_data = NULL;
         send_response (c, BAD_REQUEST, song_data);
+    }
 }
 
-void
-cz_get_lyrics (struct mg_connection *c, struct mg_http_message *hm)
+static void
+get_lyrics (struct mg_connection *c, struct mg_http_message *hm)
 {
     int              cz_errno;
     struct Endpoint *endpoint;
@@ -73,8 +77,8 @@ cz_get_lyrics (struct mg_connection *c, struct mg_http_message *hm)
     free_endpoint (&endpoint);
 }
 
-void
-create_response_body (int http_err_code, const char *message, struct SongData *song_data, char **response_body)
+static void
+create_response_body (http_code status, const char *message, struct SongData *song_data, char **response_body)
 {
     char *artist, *song, *lyrics, *json;
 
@@ -92,38 +96,38 @@ create_response_body (int http_err_code, const char *message, struct SongData *s
 
     mjson_printf (mjson_print_dynamic_buf, &json,
                   "{%Q:{%Q:%d,%Q:%Q},%Q:{%Q:%Q,%Q:%Q,%Q:%Q}}", 
-                  "error", "code", http_err_code, "message", message,
+                  "error", "code", status, "message", message,
                   "data", "artist", artist, "song", song, "lyrics", lyrics);
 
     *response_body = strdup (json);
     free (json);
 }
 
-void
-send_response (struct mg_connection *c, int http_err_code, struct SongData *song_data)
+static void
+send_response (struct mg_connection *c, http_code status, struct SongData *song_data)
 {
     char *response_body;
 
     response_body = "";
 
-    switch (http_err_code)
+    switch (status)
     {
         case OK:
-            create_response_body (http_err_code, CZ_HTTP_MSG_OK, song_data, &response_body);
+            create_response_body (status, HTTP_MSG_OK, song_data, &response_body);
             break;
         case BAD_REQUEST:
-            create_response_body (http_err_code, CZ_HTTP_MSG_BAD_REQUEST, song_data, &response_body);
+            create_response_body (status, HTTP_MSG_BAD_REQUEST, song_data, &response_body);
             break;
         case NOT_FOUND:
-            create_response_body (http_err_code, CZ_HTTP_MSG_NOT_FOUND, song_data, &response_body);
+            create_response_body (status, HTTP_MSG_NOT_FOUND, song_data, &response_body);
             break;
         case SERVER_ERROR:
-            create_response_body (http_err_code, CZ_HTTP_MSG_SERVER_ERROR, song_data, &response_body);
+            create_response_body (status, HTTP_MSG_SERVER_ERROR, song_data, &response_body);
             break;
         default:
             break;
     }
 
-    mg_http_reply (c, http_err_code, CZ_RESPONSE_HEADER_OPTIONS, "%s", response_body);
+    mg_http_reply (c, status, RESPONSE_HEADER_OPTIONS, "%s", response_body);
 }
 

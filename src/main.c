@@ -2,7 +2,7 @@
 
 #include "external/mongoose/mongoose.h"
 
-#include "czlyrics-api.h"
+#include "include/api.h"
 
 #define CZ_POLL_TIME 1000
 

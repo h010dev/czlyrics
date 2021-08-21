@@ -1,9 +1,9 @@
+#include "parser-internal.h"
+
 #include "string.h"
 #include "stdio.h"
 #include "stdlib.h"
 #include "ctype.h"
-
-#include "czlyrics-parser.h"
 
 const char* const FILENAME_FMT      = "./cache/%s_%s.html";
 const char* const ARTIST_NAME_START = "ArtistName = \"";
@@ -12,6 +12,8 @@ const char* const SONG_TITLE_START  = "SongName = \"";
 const char* const SONG_TITLE_END    = "\"";
 const char* const SONG_LYRICS_START = "Sorry about that. -->";
 const char* const SONG_LYRICS_END   = "</div>";
+
+/* PUBLIC METHODS */
 
 int
 parse_url (const char *s_url, struct Endpoint **endpoint)
@@ -32,30 +34,6 @@ parse_url (const char *s_url, struct Endpoint **endpoint)
     free (song);
 
     return 0;
-}
-
-char *
-parse_subdir (char *cur, char **subdir)
-{
-    int  pos;
-    char temp[255];
-
-    pos = 0;
-    while (*cur != '/')
-    {
-        if (isalnum (*cur))
-        {
-            temp[pos] = tolower (*cur);
-            pos++;
-        }
-        else if (*cur == '%') /* % marks beginning of space (%20) */
-            cur += 2;
-        cur++;
-    }
-    temp[pos] = '\0';
-    *subdir = strdup (temp);
-
-    return cur;
 }
 
 int
@@ -104,7 +82,50 @@ parse_song_data (struct Endpoint *endpoint, struct SongData **song_data)
     return 0;
 }
 
-int
+void
+free_endpoint (struct Endpoint **endpoint)
+{
+    free ((*endpoint)->song);
+    free ((*endpoint)->artist);
+    free (*endpoint);
+}
+
+void
+free_song_data (struct SongData **song_data)
+{
+    free ((*song_data)->song_lyrics);
+    free ((*song_data)->song_title);
+    free ((*song_data)->artist_name);
+    free (*song_data);
+}
+
+/* INTERNAL METHODS */
+
+static char *
+parse_subdir (char *cur, char **subdir)
+{
+    int  pos;
+    char temp[255];
+
+    pos = 0;
+    while (*cur != '/')
+    {
+        if (isalnum (*cur))
+        {
+            temp[pos] = tolower (*cur);
+            pos++;
+        }
+        else if (*cur == '%') /* % marks beginning of space (%20) */
+            cur += 2;
+        cur++;
+    }
+    temp[pos] = '\0';
+    *subdir = strdup (temp);
+
+    return cur;
+}
+
+static int
 buffer_file (struct Endpoint *endpoint, char **buffer)
 {
     // Open html file 
@@ -146,7 +167,7 @@ buffer_file (struct Endpoint *endpoint, char **buffer)
     return 0;
 }
 
-size_t
+static size_t
 slice_text (char *textbuffer, char *start_match, char *end_match, char **slice)
 {
     char  *temp;
@@ -168,7 +189,7 @@ slice_text (char *textbuffer, char *start_match, char *end_match, char **slice)
     return len;
 }
 
-size_t
+static size_t
 parse_artist_name (char *textbuffer, char **artist_name)
 {
     int    pos;
@@ -180,7 +201,7 @@ parse_artist_name (char *textbuffer, char **artist_name)
     return len;
 }
 
-size_t
+static size_t
 parse_song_title (char *textbuffer, char **song_title)
 {
     int    pos;
@@ -192,7 +213,7 @@ parse_song_title (char *textbuffer, char **song_title)
     return len;
 }
 
-size_t
+static size_t
 parse_song_lyrics (char *textbuffer, char **song_lyrics)
 {
     char  *cur, *s_song_lyrics, *s_raw_lyrics;
@@ -234,22 +255,5 @@ parse_song_lyrics (char *textbuffer, char **song_lyrics)
     free (s_song_lyrics);
 
     return len;
-}
-
-void
-free_endpoint (struct Endpoint **endpoint)
-{
-    free ((*endpoint)->song);
-    free ((*endpoint)->artist);
-    free (*endpoint);
-}
-
-void
-free_song_data (struct SongData **song_data)
-{
-    free ((*song_data)->song_lyrics);
-    free ((*song_data)->song_title);
-    free ((*song_data)->artist_name);
-    free (*song_data);
 }
 

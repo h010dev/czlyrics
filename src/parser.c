@@ -39,8 +39,8 @@ parse_url (const char *s_url, Endpoint **endpoint)
 int
 parse_song_data (Endpoint *endpoint, SongData **song_data)
 {
-    char  *f_data;
     int    cz_errno;
+    char  *f_data;
     size_t len;
 
     // Load HTML file into buffer
@@ -104,10 +104,9 @@ free_song_data (SongData **song_data)
 static char *
 parse_subdir (char *cur, char **subdir)
 {
-    int  pos;
+    int  pos = 0;
     char temp[255];
 
-    pos = 0;
     while (*cur != '/')
     {
         if (isalnum (*cur))
@@ -142,10 +141,8 @@ buffer_file (Endpoint *endpoint, char **buffer)
     }
 
     // Allocate buffer for file contents
-    long  f_size;
-
     fseek (fp, 0L, SEEK_END);
-    f_size = ftell (fp);
+    long f_size = ftell (fp);
     rewind (fp);
 
     if ( (*buffer = calloc (1, f_size + 1)) == NULL)
@@ -172,7 +169,6 @@ buffer_file (Endpoint *endpoint, char **buffer)
 static size_t
 slice_text (char *textbuffer, char *start_match, char *end_match, char **slice)
 {
-    char  *temp;
     char  *cur, *cur_end;
     size_t len;
 
@@ -194,7 +190,6 @@ slice_text (char *textbuffer, char *start_match, char *end_match, char **slice)
 static size_t
 parse_artist_name (char *textbuffer, char **artist_name)
 {
-    int    pos;
     size_t len;
 
     if ( (len = slice_text (textbuffer, (char *) ARTIST_NAME_START, (char *) ARTIST_NAME_END, &*artist_name)) == 0 )
@@ -206,7 +201,6 @@ parse_artist_name (char *textbuffer, char **artist_name)
 static size_t
 parse_song_title (char *textbuffer, char **song_title)
 {
-    int    pos;
     size_t len;
 
     if ( (len = slice_text (textbuffer, (char *) SONG_TITLE_START, (char *) SONG_TITLE_END, &*song_title)) == 0 )
@@ -218,18 +212,17 @@ parse_song_title (char *textbuffer, char **song_title)
 static size_t
 parse_song_lyrics (char *textbuffer, char **song_lyrics)
 {
-    char  *cur, *s_song_lyrics, *s_raw_lyrics;
-    int    pos;
+    char  *s_raw_lyrics;
     size_t len;
 
     if ( (len = slice_text (textbuffer, (char *) SONG_LYRICS_START, (char *) SONG_LYRICS_END, &s_raw_lyrics)) == 0 )
         return 0;
 
-    s_song_lyrics = calloc (len, sizeof (char));
+    char *s_song_lyrics = calloc (len, sizeof (char));
 
     // Scan lyrics and replace any tags
-    pos = 0;
-    cur = s_raw_lyrics;
+    int   pos = 0;
+    char *cur = s_raw_lyrics;
     while (*cur != '\0')
     {
         if (*cur == '<')              /* start of a tag */

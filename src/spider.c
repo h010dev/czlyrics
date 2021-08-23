@@ -13,12 +13,10 @@ const char* const OK_CODE     = "200";
 int
 scrape_lyrics (const char *artist, const char *song)
 {
-    struct mg_mgr  mgr;
-    char           url[1024];
-    FnSpiderData  *data;
-    int            cz_errno;
+    struct mg_mgr mgr;
+    char          url[1024];
 
-    data = new_fn_spider_data ((char *) artist, (char *) song);
+    FnSpiderData *data = new_fn_spider_data ((char *) artist, (char *) song);
 
     snprintf (url, 1024, URL_FMT, artist, song);
 
@@ -29,7 +27,7 @@ scrape_lyrics (const char *artist, const char *song)
         mg_mgr_poll (&mgr, 1000);
     mg_mgr_free (&mgr);
 
-    cz_errno = data->cz_errno;
+    int cz_errno = data->cz_errno;
     free_fn_spider_data (&data);
 
     return cz_errno;
@@ -48,10 +46,8 @@ fn_spider (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
     }
     else if (ev == MG_EV_HTTP_MSG)
     {
-        struct mg_http_message *hm;
-        char                   *response_code;
-
-        hm = (struct mg_http_message *) ev_data;
+        char *response_code;
+        struct mg_http_message *hm = (struct mg_http_message *) ev_data;
 
         strncpy (response_code, hm->uri.ptr, (size_t) hm->uri.len);
         if (strcmp (OK_CODE, response_code) == 0)
@@ -104,9 +100,7 @@ write_to_file (void)
 static FnSpiderData *
 new_fn_spider_data (char *artist, char *song)
 {
-    FnSpiderData *data;
-
-    data = malloc (sizeof (FnSpiderData));
+    FnSpiderData *data = malloc (sizeof (FnSpiderData));
     data->s_artist = strdup (artist);
     data->s_song = strdup (song);
     data->done = false;

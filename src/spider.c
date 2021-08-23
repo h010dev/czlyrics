@@ -13,10 +13,10 @@ const char* const OK_CODE     = "200";
 int
 scrape_lyrics (const char *artist, const char *song)
 {
-    struct mg_mgr        mgr;
-    char                 url[1024];
-    struct FnSpiderData *data;
-    int                  cz_errno;
+    struct mg_mgr  mgr;
+    char           url[1024];
+    FnSpiderData  *data;
+    int            cz_errno;
 
     data = new_fn_spider_data ((char *) artist, (char *) song);
 
@@ -44,7 +44,7 @@ fn_spider (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
     {
         struct mg_tls_opts opts = {.srvname = TARGET_HOST};
         mg_tls_init(c, &opts);
-        send_request (c, ((struct FnSpiderData *) fn_data)->s_artist, ((struct FnSpiderData *) fn_data)->s_song);
+        send_request (c, ((FnSpiderData *) fn_data)->s_artist, ((FnSpiderData *) fn_data)->s_song);
     }
     else if (ev == MG_EV_HTTP_MSG)
     {
@@ -61,23 +61,22 @@ fn_spider (struct mg_connection *c, int ev, void *ev_data, void *fn_data)
             snprintf (buffer,
                       sizeof (buffer),
                       "./cache/%s_%s.html",
-                      ((struct FnSpiderData *) fn_data)->s_artist,
-                      ((struct FnSpiderData *) fn_data)->s_song);
-            ((struct FnSpiderData *) fn_data)->cz_errno = mg_file_printf (buffer,
-                                                                          "%.*s",
-                                                                          (int) hm->body.len,
-                                                                          hm->body.ptr) == 0;
+                      ((FnSpiderData *) fn_data)->s_artist,
+                      ((FnSpiderData *) fn_data)->s_song);
+            ((FnSpiderData *) fn_data)->cz_errno = mg_file_printf (buffer, "%.*s", (int) hm->body.len, hm->body.ptr) == 0;
         }
         else
-            ((struct FnSpiderData *) fn_data)->cz_errno = 1;
+        {
+            ((FnSpiderData *) fn_data)->cz_errno = 1;
+        }
 
         c->is_closing = 1;
-        ((struct FnSpiderData *) fn_data)->done = true;
+        ((FnSpiderData *) fn_data)->done = true;
     }
     else if (ev == MG_EV_ERROR)
     {
-        ((struct FnSpiderData *) fn_data)->cz_errno = 1;
-        ((struct FnSpiderData *) fn_data)->done = true;
+        ((FnSpiderData *) fn_data)->cz_errno = 1;
+        ((FnSpiderData *) fn_data)->done = true;
     }
 }
 
@@ -102,12 +101,12 @@ write_to_file (void)
 {
 }
 
-static struct FnSpiderData *
+static FnSpiderData *
 new_fn_spider_data (char *artist, char *song)
 {
-    struct FnSpiderData *data;
+    FnSpiderData *data;
 
-    data = malloc (sizeof (struct FnSpiderData));
+    data = malloc (sizeof (FnSpiderData));
     data->s_artist = strdup (artist);
     data->s_song = strdup (song);
     data->done = false;
@@ -117,7 +116,7 @@ new_fn_spider_data (char *artist, char *song)
 }
 
 static void
-free_fn_spider_data (struct FnSpiderData **data)
+free_fn_spider_data (FnSpiderData **data)
 {
     free ((*data)->s_artist);
     free ((*data)->s_song);

@@ -16,7 +16,7 @@ const char* const SONG_LYRICS_END   = "</div>";
 /* PUBLIC METHODS */
 
 int
-parse_url (const char *s_url, struct Endpoint **endpoint)
+parse_url (const char *s_url, Endpoint **endpoint)
 {
     char *artist, *song, *match, *cur;
 
@@ -37,7 +37,7 @@ parse_url (const char *s_url, struct Endpoint **endpoint)
 }
 
 int
-parse_song_data (struct Endpoint *endpoint, struct SongData **song_data)
+parse_song_data (Endpoint *endpoint, SongData **song_data)
 {
     char  *f_data;
     int    cz_errno;
@@ -83,7 +83,7 @@ parse_song_data (struct Endpoint *endpoint, struct SongData **song_data)
 }
 
 void
-free_endpoint (struct Endpoint **endpoint)
+free_endpoint (Endpoint **endpoint)
 {
     free ((*endpoint)->song);
     free ((*endpoint)->artist);
@@ -91,7 +91,7 @@ free_endpoint (struct Endpoint **endpoint)
 }
 
 void
-free_song_data (struct SongData **song_data)
+free_song_data (SongData **song_data)
 {
     free ((*song_data)->song_lyrics);
     free ((*song_data)->song_title);
@@ -116,7 +116,9 @@ parse_subdir (char *cur, char **subdir)
             pos++;
         }
         else if (*cur == '%') /* % marks beginning of space (%20) */
+        {
             cur += 2;
+        }
         cur++;
     }
     temp[pos] = '\0';
@@ -126,7 +128,7 @@ parse_subdir (char *cur, char **subdir)
 }
 
 static int
-buffer_file (struct Endpoint *endpoint, char **buffer)
+buffer_file (Endpoint *endpoint, char **buffer)
 {
     // Open html file 
     FILE *fp;

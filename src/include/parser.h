@@ -12,7 +12,7 @@
  *
  * Includes artist name and song title.
  */
-typedef struct Endpoint
+typedef struct
 {
     char *artist;
     char *song;
@@ -23,7 +23,7 @@ typedef struct Endpoint
  *
  * Includes artist name, song title, and song lyrics.
  */
-typedef struct SongData
+typedef struct
 {
     char *artist_name;
     char *song_title;
@@ -39,7 +39,7 @@ typedef struct SongData
  * @param[in, out] endpoint the resulting Endpoint struct 
  * @param[out]     cz_errno error code signaling success (0) or failure (1)
  */
-int parse_url (const char *url, struct Endpoint **endpoint);
+int parse_url (const char *url, Endpoint **endpoint);
 
 /**
  * @brief Parses lyrics for given Endpoint and creates SongData struct with parsed data.
@@ -51,7 +51,7 @@ int parse_url (const char *url, struct Endpoint **endpoint);
  * @param[in, out] song_data SongData struct containing artist name, song title, and song lyrics
  * @param[out]     cz_errno  error code signaling success (0) or failure (1)
  */
-int parse_song_data (struct Endpoint *endpoint, struct SongData **song_data);
+int parse_song_data (Endpoint *endpoint, SongData **song_data);
 
 /**
  * @brief Frees Endpoint struct.
@@ -60,7 +60,7 @@ int parse_song_data (struct Endpoint *endpoint, struct SongData **song_data);
  *
  * @param[in, out] endpoint Endpoint struct to be freed 
  */
-void free_endpoint (struct Endpoint **endpoint);
+void free_endpoint (Endpoint **endpoint);
 
 /**
  * @brief Frees SongData struct.
@@ -69,6 +69,6 @@ void free_endpoint (struct Endpoint **endpoint);
  *
  * @param[in, out] song_data SongData struct to be freed 
  */
-void free_song_data (struct SongData **song_data);
+void free_song_data (SongData **song_data);
 
 #endif /* PARSER_H */

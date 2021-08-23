@@ -87,7 +87,7 @@ static size_t parse_song_lyrics (char *textbuffer, char **song_lyrics);
  * @param[in, out] buffer   buffer to hold entire HTML contents 
  * @param[out]     cz_errno error code signaling success (0) or failure (1)      
  */
-static int buffer_file (struct Endpoint *endpoint, char **buffer);
+static int buffer_file (Endpoint *endpoint, char **buffer);
 
 /**
  * @brief Creates @p slice holding text from @p textbuffer that lies between @p start_match and @p end_match.

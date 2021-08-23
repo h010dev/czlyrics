@@ -21,7 +21,7 @@ extern const char* const OK_CODE;     /**< String format of 200 OK response code
  *
  * Includes artist name, song title, done status, and error code.
  */
-typedef struct FnSpiderData
+typedef struct
 {
     char *s_artist;
     char *s_song;
@@ -66,7 +66,7 @@ static void write_to_file (void);
  * @param[in]  song   song title 
  * @param[out] data   new FnSpiderData struct
  */
-static struct FnSpiderData *new_fn_spider_data (char *artist, char *song);
+static FnSpiderData *new_fn_spider_data (char *artist, char *song);
 
 /**
  * @brief Frees FnSpiderData struct.
@@ -75,6 +75,6 @@ static struct FnSpiderData *new_fn_spider_data (char *artist, char *song);
  *
  * @param[in, out] data FnSpiderData struct to be freed 
  */
-static void free_fn_spider_data (struct FnSpiderData **data);
+static void free_fn_spider_data (FnSpiderData **data);
 
 #endif /* SPIDER_INTERNAL_H */

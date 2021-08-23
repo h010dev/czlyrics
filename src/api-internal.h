@@ -25,7 +25,7 @@ extern const char* const HTTP_MSG_SERVER_ERROR;   /**< String message for HTTP 5
  *
  * Only includes status codes used by API.
  */
-typedef enum http_code 
+typedef enum
 {
     OK           = 200,
     BAD_REQUEST  = 400,
@@ -76,7 +76,7 @@ static void get_lyrics (struct mg_connection *c, struct mg_http_message *hm);
  * @param[in]      song_data     song information
  * @param[in, out] response_body newly created response body
  */
-static void create_response_body (http_code status, const char *message, struct SongData *song_data, char **response_body);
+static void create_response_body (http_code status, const char *message, SongData *song_data, char **response_body);
 
 /**
  * @brief Sends HTTP response back to client.
@@ -88,6 +88,6 @@ static void create_response_body (http_code status, const char *message, struct 
  * @param[in] http_err_code http status code
  * @param[in] song_data     song data to be sent (can be NULL)
  */
-static void send_response (struct mg_connection *c, http_code status, struct SongData *song_data);
+static void send_response (struct mg_connection *c, http_code status, SongData *song_data);
 
 #endif /* API_INTERNAL_H */

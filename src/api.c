@@ -31,10 +31,12 @@ static void
 handle_request (struct mg_connection *c, struct mg_http_message *hm)
 {
     if (mg_http_match_uri (hm, API_ENDPOINT))
+    {
         get_lyrics (c, hm);
+    }
     else
     {
-        struct SongData *song_data;
+        SongData *song_data;
 
         song_data = NULL;
         send_response (c, BAD_REQUEST, song_data);
@@ -44,9 +46,9 @@ handle_request (struct mg_connection *c, struct mg_http_message *hm)
 static void
 get_lyrics (struct mg_connection *c, struct mg_http_message *hm)
 {
-    int              cz_errno;
-    struct Endpoint *endpoint;
-    struct SongData *song_data;
+    int       cz_errno;
+    Endpoint *endpoint;
+    SongData *song_data;
 
     endpoint  = malloc (sizeof (Endpoint));
     song_data = NULL;
@@ -78,7 +80,7 @@ get_lyrics (struct mg_connection *c, struct mg_http_message *hm)
 }
 
 static void
-create_response_body (http_code status, const char *message, struct SongData *song_data, char **response_body)
+create_response_body (http_code status, const char *message, SongData *song_data, char **response_body)
 {
     char *artist, *song, *lyrics, *json;
 
@@ -104,7 +106,7 @@ create_response_body (http_code status, const char *message, struct SongData *so
 }
 
 static void
-send_response (struct mg_connection *c, http_code status, struct SongData *song_data)
+send_response (struct mg_connection *c, http_code status, SongData *song_data)
 {
     char *response_body;
 

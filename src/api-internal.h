@@ -19,6 +19,8 @@ extern const char* const HTTP_MSG_OK;             /**< String message for HTTP 2
 extern const char* const HTTP_MSG_BAD_REQUEST;    /**< String message for HTTP 400 Bad Request */
 extern const char* const HTTP_MSG_NOT_FOUND;      /**< String message for HTTP 404 Not Found */
 extern const char* const HTTP_MSG_SERVER_ERROR;   /**< String message for HTTP 500 Internal Server Error */
+extern const char* const HTTP_BODY_TEMPLATE;      /**< HTTP JSON body template string */
+extern const char* const http_msg[];              /**< Mapping between HTTP status codes and HTTP status messages */
 
 /**
  * @brief HTTP status codes.
@@ -63,6 +65,18 @@ static void handle_request (struct mg_connection *c, struct mg_http_message *hm)
 static void get_lyrics (struct mg_connection *c, struct mg_http_message *hm);
 
 /**
+ * @brief Sends HTTP response back to client.
+ *
+ * Inspects @p status and sends appropriate response to client. 
+ * Optionally includes @p song_data if @p status is 200.
+ *
+ * @param[in] c             connection @see http://cesanta.com/docs/#struct-mg_connections
+ * @param[in] http_err_code http status code
+ * @param[in] song_data     song data to be sent (can be NULL)
+ */
+static void send_response (struct mg_connection *c, http_code status, SongData *song_data);
+
+/**
  * @brief Creates a JSON formatted response body containing the HTTP status code and message, and song data (if any).
  *
  * All JSON response bodies contain an overview of the http status code and accompanying message,
@@ -77,17 +91,5 @@ static void get_lyrics (struct mg_connection *c, struct mg_http_message *hm);
  * @param[in, out] response_body newly created response body
  */
 static void create_response_body (http_code status, const char *message, SongData *song_data, char **response_body);
-
-/**
- * @brief Sends HTTP response back to client.
- *
- * Inspects @p status and sends appropriate response to client. 
- * Optionally includes @p song_data if @p status is 200.
- *
- * @param[in] c             connection @see http://cesanta.com/docs/#struct-mg_connections
- * @param[in] http_err_code http status code
- * @param[in] song_data     song data to be sent (can be NULL)
- */
-static void send_response (struct mg_connection *c, http_code status, SongData *song_data);
 
 #endif /* API_INTERNAL_H */

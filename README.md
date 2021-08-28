@@ -2,8 +2,6 @@
 
 czlyrics is a microservice application for retrieving the lyrics for a given song.
 
-For a quick demo, you can visit the following [link](https://czlyrics.mohamedalhussein.com).
-
 This project is being actively worked on, so stay tuned for more updates!
 
 ### Built With

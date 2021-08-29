@@ -1,9 +1,10 @@
 #include "parser-internal.h"
 
-#include "string.h"
-#include "stdio.h"
-#include "stdlib.h"
-#include "ctype.h"
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <stdbool.h>
 
 const char* const FILENAME_FMT      = "./cache/%s_%s.html";
 const char* const ARTIST_NAME_START = "ArtistName = \"";
@@ -82,6 +83,31 @@ parse_song_data (Endpoint *endpoint, SongData **song_data)
     return 0;
 }
 
+bool
+file_exists (Endpoint *endpoint)
+{
+    char *f_path;
+
+    // Create filepath
+    if (create_filepath (endpoint, &f_path) != 0)
+    {
+        free (f_path);
+        return false;
+    }
+
+    // Try to open file
+    FILE *fp;
+    if ( (fp = fopen (f_path, "rb")) == NULL)
+    {
+        free (f_path);
+        return false;
+    }
+    fclose (fp);
+    free (f_path);
+
+    return true;
+}
+
 void
 free_endpoint (Endpoint **endpoint)
 {
@@ -129,16 +155,25 @@ parse_subdir (char *cur, char **subdir)
 static int
 buffer_file (Endpoint *endpoint, char **buffer)
 {
-    // Open html file 
     FILE *fp;
-    char  f_path[1024];
+    char *f_path;
 
-    snprintf (f_path, sizeof (f_path), FILENAME_FMT, endpoint->artist, endpoint->song);
+    // Create html filepath
+    if (create_filepath (endpoint, &f_path) != 0)
+    {
+        printf ("Couldn't create file path.\n");
+        free (f_path);
+        return 1;
+    }
+
+    // Open html file 
     if ( (fp = fopen (f_path, "rb")) == NULL)
     {
         printf ("File couldn't be opened.\n");
+        free (f_path);
         return 1;
     }
+    free (f_path);
 
     // Allocate buffer for file contents
     fseek (fp, 0L, SEEK_END);
@@ -162,6 +197,17 @@ buffer_file (Endpoint *endpoint, char **buffer)
         return 1;
     }
     fclose (fp);
+
+    return 0;
+}
+
+static int
+create_filepath (Endpoint *endpoint, char **filepath)
+{
+    char f_path[1024];
+
+    snprintf (f_path, sizeof (f_path), FILENAME_FMT, endpoint->artist, endpoint->song);
+    *filepath = strdup (f_path);
 
     return 0;
 }

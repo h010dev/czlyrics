@@ -90,6 +90,17 @@ static size_t parse_song_lyrics (char *textbuffer, char **song_lyrics);
 static int buffer_file (Endpoint *endpoint, char **buffer);
 
 /**
+ * @brief Creates an html file path out of endpoint members.
+ *
+ * Formats path as `./cache/{endpoint->artist_name}_{endpoint->song_title}.html`.
+ *
+ * @param[in]      endpoint Endpoint struct containing artist name and song title to search for 
+ * @param[in, out] filepath Holds resulting filepath 
+ * @param[out]     cz_errno error code signaling success (0) or failure (1)      
+ */
+static int create_filepath (Endpoint *endpoint, char **filepath);
+
+/**
  * @brief Creates @p slice holding text from @p textbuffer that lies between @p start_match and @p end_match.
  *
  * Given a start pattern and end pattern, slices string from HTML text buffer that lies between the two.

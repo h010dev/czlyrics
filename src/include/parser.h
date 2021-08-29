@@ -7,6 +7,8 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include <stdbool.h>
+
 /**
  * @brief Parsed endpoint.
  *
@@ -52,6 +54,16 @@ int parse_url (const char *url, Endpoint **endpoint);
  * @param[out]     cz_errno  error code signaling success (0) or failure (1)
  */
 int parse_song_data (Endpoint *endpoint, SongData **song_data);
+
+/**
+ * @brief Checks if an html file for given endpoint exists.
+ *
+ * Creates a file name out of endpoint members and searches cache directory for matching html file.
+ *
+ * @param[in]      endpoint  Endpoint struct containing artist name and song title 
+ * @param[out]     exists    true if file exists and false otherwise 
+ */
+bool file_exists (Endpoint *endpoint);
 
 /**
  * @brief Frees Endpoint struct.

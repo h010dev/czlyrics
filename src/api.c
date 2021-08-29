@@ -65,12 +65,16 @@ get_lyrics (struct mg_connection *c, struct mg_http_message *hm)
         return;
     }
 
-    // Scrape lyrics from target site
-    if ( (cz_errno = scrape_lyrics (endpoint->artist, endpoint->song)) != 0 )
+    // Check local cache for song
+    if (!file_exists (endpoint))
     {
-        send_response (c, NOT_FOUND, song_data);
-        free_endpoint (&endpoint);
-        return;
+        // Scrape lyrics from target site
+        if ( (cz_errno = scrape_lyrics (endpoint->artist, endpoint->song)) != 0 )
+        {
+            send_response (c, NOT_FOUND, song_data);
+            free_endpoint (&endpoint);
+            return;
+        }
     }
 
     // Extract lyrics and send back to client

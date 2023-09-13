@@ -72,7 +72,3 @@ The response message will be a JSON object with the following structure:
 
 Distributed under the MIT LIcense. See `LICENSE` for more information.
 
-# Contact
-
-Email: mohamed.n.al.hussein@gmail.com
-
